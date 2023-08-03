@@ -23,6 +23,7 @@ const UserSchema = new Schema(
         password: {type: String, required: true},
         salt: {type: String, required: true},
         otp: {type: String, required: true},
+        otp_expiry: {type: String, required: true},
         verified: {type: Boolean, default: false},
         todos: [ {type: Schema.Types.ObjectId, ref: 'todo'}]
     },

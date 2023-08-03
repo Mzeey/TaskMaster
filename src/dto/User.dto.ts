@@ -24,3 +24,7 @@ export interface ChangePasswordRequestInputs{
     oldPassword: string;
     newPassword: string;
 }
+
+export interface VerifyUserRequestInput{
+    otp: string
+}
