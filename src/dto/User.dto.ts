@@ -1,10 +1,10 @@
 export interface UserPayload{
-    signature: string;
+    _id: string;
     email: string; 
     username: string;
     firstName:string;
     lastName: string;
-    userVerified: string;
+    userVerified: boolean;
 }
 
 export interface RegisterRequestInputs{
@@ -23,4 +23,8 @@ export interface LoginRequestInputs{
 export interface ChangePasswordRequestInputs{
     oldPassword: string;
     newPassword: string;
+}
+
+export interface VerifyUserRequestInput{
+    otp: string
 }
