@@ -39,3 +39,16 @@ export interface UpdateProfileRequestInputs{
     lastName: string;
     username: string;
 }
+
+export interface RequestPasswordResetInputs{
+    email: string;
+}
+
+export interface ChangPasswordRequestInputs{
+    oldPassword: string;
+    newPassword: string
+}
+
+export interface ResetPasswordInputs{
+    newPassword: string;
+}

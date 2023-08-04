@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { LoginRequestInputs, RegisterRequestInputs, UpdateLocaitonRequestInputs, UpdateProfileRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
+import { LoginRequestInputs, RegisterRequestInputs, RequestPasswordResetInputs, ResetPasswordInputs, UpdateLocaitonRequestInputs, UpdateProfileRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
 import { GenerateSalt, GenerateSignature, HashPassword, ValidatePassword } from "../utilities";
 import { GenerateOTP, GenerateOTPExpiry, OnRequestOTP } from "../utilities/NotificationUtility";
 import { User } from "../models";
@@ -222,3 +222,26 @@ export const UpdateLocation = async (req: Request, res: Response, next: NextFunc
 }
 
 export const ChangePassword = async (req: Request, res: Response, next: NextFunction) => {};
+export const RequestPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
+    const requestData = <RequestPasswordResetInputs>req.body;
+    
+    const profile = await User.findOne({email: requestData.email.toLowerCase()});
+    if(!profile){
+        return res.status(400).json({message: "This email is not registered with us"});
+    }
+
+    profile.otp = GenerateOTP();
+    profile.otp_expiry = GenerateOTPExpiry().toISOString();
+
+    const mailingResponse = await OnRequestOTP(profile.otp, profile.email);
+    if(!mailingResponse.sent){
+        return res.status(400).json({message: mailingResponse.message});
+    }
+    const updatedProfile = await profile.save();
+    if(!updatedProfile){
+        return res.status(400).json({message: "Could not generate OTP"});
+    }
+
+    return res.status(200).json({message: "Password reset OTP sent successfully."})
+};
+export const ResetPassword = async (req: Request, res: Response, next: NextFunction) => {};
