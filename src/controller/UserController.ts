@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { RegisterRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
-import { GenerateSalt, GenerateSignature, HashPassword } from "../utilities";
+import { LoginRequestInputs, RegisterRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
+import { GenerateSalt, GenerateSignature, HashPassword, ValidatePassword } from "../utilities";
 import { GenerateOTP, GenerateOTPExpiry, OnRequestOTP } from "../utilities/NotificationUtility";
 import { User } from "../models";
 
@@ -99,10 +99,66 @@ export const VerifyUser = async (req: Request, res: Response, next: NextFunction
 };
 
 export const RequestNewOTP = async (req: Request, res: Response, next: NextFunction) => {
+    const user = <UserPayload> req.user;
+    if(!user){
+        return res.status(400).json({message: "Unauthorized User"});
+    }
+    const profile = await User.findById(user._id);
+    if(!profile){
+        return res.status(400).json({message: "User not found"});
+    }
+
+    const otp = GenerateOTP();
+    const otp_expiry = GenerateOTPExpiry();
+
+    profile.otp = otp;
+    profile.otp_expiry = otp_expiry.toISOString();
+
+    const mailingResponse = await OnRequestOTP(otp, profile.email);
+    if(mailingResponse.sent){
+        return res.status(200).json({message: "New OTP sent successfully."});
+    }
+
+    return res.status(400).json({message: mailingResponse.message});
     
 }
 
-export const Login = async (req: Request, res: Response, next: NextFunction) => {};
+export const Login = async (req: Request, res: Response, next: NextFunction) => {
+    const userInputs = <LoginRequestInputs> req.body;
+    userInputs.email = userInputs.email.toLowerCase();
+    
+    const profile = await User.findOne({email: userInputs.email});
+    if(!profile){
+        return res.status(400).json({message: "Invalid Login Credentials"});
+    }
+
+    const validPassword = ValidatePassword(userInputs.password, profile.password, profile.salt);
+    if(!validPassword){
+        return res.status(400).json({message: "Invalid Login Credentials"});
+    }
+
+    const signature = GenerateSignature({
+        _id: profile.id,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        username: profile.username,
+        userVerified: profile.verified,
+        email: profile.email
+    });
+
+    if(signature){
+        return res.status(200).json({
+            signature: signature,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            username: profile.username,
+            userVerified: profile.verified,
+            email: profile.email
+        });
+    }
+
+    return res.status(400).json({message: "Login Failed"});
+};
 
 export const GetProfile = async (req: Request, res: Response, next: NextFunction) => {};
 

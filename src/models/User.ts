@@ -1,17 +1,21 @@
 import mongoose,{ Document, Schema } from "mongoose";
 import { TodoDoc } from "./Todo";
+import { CategoryDoc } from "./Category";
 
 export interface UserDoc extends Document{
     firstName: string;
     lastName: string;
     username: string;
     email: string
-    password: string; 
+    password: string;
+    longitude: number;
+    latitude: number;
     salt: string;
     otp: string;
     otp_expiry: string;
     verified: boolean;
-    todos: [TodoDoc]
+    todos: [TodoDoc];
+    categories: [CategoryDoc];
 }
 
 const UserSchema = new Schema(
@@ -22,10 +26,13 @@ const UserSchema = new Schema(
         email: {type: String, required: true},
         password: {type: String, required: true},
         salt: {type: String, required: true},
+        longitude: {type: Number},
+        latitude: {type: Number},
         otp: {type: String, required: true},
         otp_expiry: {type: String, required: true},
         verified: {type: Boolean, default: false},
-        todos: [ {type: Schema.Types.ObjectId, ref: 'todo'}]
+        todos: [ {type: Schema.Types.ObjectId, ref: 'todo'}],
+        categories: [{type: Schema.Types.ObjectId, ref: 'categories'}]
     },
     {
         toJSON: {
@@ -34,6 +41,8 @@ const UserSchema = new Schema(
 				delete ret.createdAt;
 				delete ret.updatedAt;
                 delete ret.password;
+                delete ret.otp;
+                delete ret.otp_expiry;
                 delete ret.salt;
 			}
         }, 
