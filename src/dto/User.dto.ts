@@ -28,3 +28,14 @@ export interface ChangePasswordRequestInputs{
 export interface VerifyUserRequestInput{
     otp: string
 }
+
+export interface UpdateLocaitonRequestInputs{
+    longitude: number;
+    latitude: number;
+}
+
+export interface UpdateProfileRequestInputs{
+    firstName: string;
+    lastName: string;
+    username: string;
+}

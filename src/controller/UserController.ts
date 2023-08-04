@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { LoginRequestInputs, RegisterRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
+import { LoginRequestInputs, RegisterRequestInputs, UpdateLocaitonRequestInputs, UpdateProfileRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
 import { GenerateSalt, GenerateSignature, HashPassword, ValidatePassword } from "../utilities";
 import { GenerateOTP, GenerateOTPExpiry, OnRequestOTP } from "../utilities/NotificationUtility";
 import { User } from "../models";
@@ -160,8 +160,65 @@ export const Login = async (req: Request, res: Response, next: NextFunction) => 
     return res.status(400).json({message: "Login Failed"});
 };
 
-export const GetProfile = async (req: Request, res: Response, next: NextFunction) => {};
+export const GetProfile = async (req: Request, res: Response, next: NextFunction) => {
+    const user = <UserPayload>req.user;
 
-export const UpdateProfile = async (req: Request, res: Response, next: NextFunction) => {};
+    if(!user){
+        return res.status(400).json({message: "Unauthorized User"});
+    }
+
+    const profile = await User.findById(user._id);
+    if(!profile){
+        return res.status(400).json({message: "User not found"});
+    }
+
+    return res.status(200).json({user: profile});
+};
+
+export const UpdateProfile = async (req: Request, res: Response, next: NextFunction) => {
+    const user = <UserPayload>req.user; 
+    if(!user){
+        return res.status(400).json({message: "Unauthorized User"}); 
+    }
+
+    const profile = await User.findById(user._id);
+    if(!profile){
+        return res.status(400).json({message: "User not found"});
+    }
+
+    const requestData = <UpdateProfileRequestInputs>req.body;
+    profile.firstName = requestData.firstName;
+    profile.lastName = requestData.lastName;
+    profile.username = requestData.username;
+    const saved = await profile.save();
+
+    if(!saved){
+        return res.status(400).json({message: "Could not update profile"});
+    }
+
+    return res.status(200).json({user: profile});
+};
+
+export const UpdateLocation = async (req: Request, res: Response, next: NextFunction) =>{
+    const user = <UserPayload>req.user; 
+    if(!user){
+        return res.status(400).json({message: "Unauthorized User"}); 
+    }
+
+    const profile = await User.findById(user._id);
+    if(!profile){
+        return res.status(400).json({message: "User not found"});
+    }
+
+    const requestData = <UpdateLocaitonRequestInputs>req.body;
+    profile.longitude = requestData.longitude;
+    profile.latitude = requestData.latitude;
+    const saved = await profile.save();
+    if(!saved){
+        return res.status(400).json({message: "Could not save user location"});
+    }
+
+    return res.status(200).json({user: profile});
+}
 
 export const ChangePassword = async (req: Request, res: Response, next: NextFunction) => {};

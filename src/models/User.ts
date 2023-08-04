@@ -23,11 +23,19 @@ const UserSchema = new Schema(
         firstName: {type: String, required: true},
         lastName: {type: String, required: true},
         username: {type: String, required: true},
-        email: {type: String, required: true},
+        email: {type: String, required: true, unique: true},
         password: {type: String, required: true},
         salt: {type: String, required: true},
-        longitude: {type: Number},
-        latitude: {type: Number},
+        longitude: {type: Number, validate: {
+            validator : (val:number) => { 
+                return val >= -180 && val <= 180
+            }
+        }},
+        latitude: {type: Number, validate: {
+            validator: (val: number) => {
+                return val >= -90 && val <= 90;
+            }
+        }},
         otp: {type: String, required: true},
         otp_expiry: {type: String, required: true},
         verified: {type: Boolean, default: false},
