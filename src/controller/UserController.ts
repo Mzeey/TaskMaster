@@ -1,8 +1,20 @@
 import { Request, Response, NextFunction } from "express";
-import { LoginRequestInputs, RegisterRequestInputs, RequestPasswordResetInputs, ResetPasswordInputs, UpdateLocaitonRequestInputs, UpdateProfileRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
+import { ChangePasswordRequestInputs, LoginRequestInputs, RegisterRequestInputs, RequestPasswordResetInputs, ResetPasswordInputs, UpdateLocaitonRequestInputs, UpdateProfileRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
 import { GenerateSalt, GenerateSignature, HashPassword, ValidatePassword } from "../utilities";
 import { GenerateOTP, GenerateOTPExpiry, OnRequestOTP } from "../utilities/NotificationUtility";
-import { User } from "../models";
+import { User, UserDoc } from "../models";
+
+export const GenerateUserSignature = (profile: UserDoc)=>{
+    return GenerateSignature(
+        {
+            _id: profile.id,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            email: profile.email,
+            userVerified: profile.verified,
+            username: profile.username
+        });
+}
 
 export const RegisterUser = async (req: Request, res: Response, next: NextFunction) => {
 	const userInputs = <RegisterRequestInputs>req.body;
@@ -79,14 +91,7 @@ export const VerifyUser = async (req: Request, res: Response, next: NextFunction
             return res.status(400).json({message: "An error occured, could not verify user"})
 		}
 
-        const signature = GenerateSignature({
-            _id: savedUser.id,
-            firstName: savedUser.firstName,
-            lastName: savedUser.lastName,
-            username: savedUser.username,
-            userVerified: savedUser.verified,
-            email: savedUser.email
-        })
+        const signature = GenerateUserSignature(savedUser);
 
         return res.status(200).json({
             signature: signature,
@@ -132,19 +137,12 @@ export const Login = async (req: Request, res: Response, next: NextFunction) => 
         return res.status(400).json({message: "Invalid Login Credentials"});
     }
 
-    const validPassword = ValidatePassword(userInputs.password, profile.password, profile.salt);
+    const validPassword = await ValidatePassword(userInputs.password, profile.password, profile.salt);
     if(!validPassword){
         return res.status(400).json({message: "Invalid Login Credentials"});
     }
 
-    const signature = GenerateSignature({
-        _id: profile.id,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        username: profile.username,
-        userVerified: profile.verified,
-        email: profile.email
-    });
+    const signature = GenerateUserSignature(profile);
 
     if(signature){
         return res.status(200).json({
@@ -221,7 +219,31 @@ export const UpdateLocation = async (req: Request, res: Response, next: NextFunc
     return res.status(200).json({user: profile});
 }
 
-export const ChangePassword = async (req: Request, res: Response, next: NextFunction) => {};
+export const ChangePassword = async (req: Request, res: Response, next: NextFunction) => {
+    const user = <UserPayload>req.user;
+    if(!user){
+        return res.status(400).json({message: "Unauthorized User"}); 
+    }
+    
+    const profile = await User.findById(user._id);
+    if(!profile){
+        return res.status(400).json({message: "User not found"});
+    }
+
+    const requestData = <ChangePasswordRequestInputs>req.body;
+    const samePassword = await ValidatePassword(requestData.oldPassword, profile.password, profile.salt);
+    if(!samePassword){
+        return res.status(400).json({message: "Invalid old password"});
+    }
+
+    profile.password = await  HashPassword(requestData.newPassword, profile.salt);
+    const updatedProfile = await profile.save();
+    if(!updatedProfile){
+        return res.status(400).json({message: "Could not change password"});
+    }
+    return res.status(200).json({message: "Password successfully changed."});
+};
+
 export const RequestPasswordReset = async (req: Request, res: Response, next: NextFunction) => {
     const requestData = <RequestPasswordResetInputs>req.body;
     
@@ -241,7 +263,39 @@ export const RequestPasswordReset = async (req: Request, res: Response, next: Ne
     if(!updatedProfile){
         return res.status(400).json({message: "Could not generate OTP"});
     }
+    const signature = GenerateUserSignature(profile);
 
-    return res.status(200).json({message: "Password reset OTP sent successfully."})
+    return res.status(200).json({signature: signature, message: "Password reset OTP sent successfully."})
 };
-export const ResetPassword = async (req: Request, res: Response, next: NextFunction) => {};
+
+
+export const ResetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    const user = <UserPayload>req.user;
+    if(!user){
+        return res.status(400).json({message: "Unauthorized User"});
+    }
+
+    const profile = await User.findById(user._id);
+    if(!profile){
+        return res.status(400).json({message: "User not found"});
+    }
+    const requestData = <ResetPasswordInputs>req.body;
+
+    if(profile.otp === requestData.otp){
+        const currentDate = new Date();
+        const otp_expiry = new Date(profile.otp_expiry);
+        if(currentDate > otp_expiry){
+            return res.status(400).json({mesasge: "OTP expired"})
+        }
+        
+        const hashedPassword = await HashPassword(requestData.newPassword, profile.salt);
+        profile.password = hashedPassword;
+        profile.otp_expiry = currentDate.toISOString();
+        const savedProfile = await profile.save();
+        if(!savedProfile){
+            return res.status(400).json({message: "Could not reset Password"}); 
+        }
+        return res.status(200).json({message: "Password successfully reset."})
+    }
+    return res.status(400).json({message: "Invalid OTP"});
+};

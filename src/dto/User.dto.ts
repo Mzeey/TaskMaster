@@ -50,5 +50,6 @@ export interface ChangPasswordRequestInputs{
 }
 
 export interface ResetPasswordInputs{
+    otp: string
     newPassword: string;
 }
