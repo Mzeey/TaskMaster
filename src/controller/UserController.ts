@@ -47,6 +47,8 @@ export const RegisterUser = async (req: Request, res: Response, next: NextFuncti
 		password: userPassword,
 		salt: salt,
 		otp: otp,
+        longitude: 0,
+        latitude: 0,
 		otp_expiry: otpExpiry.toISOString(),
 		verified: false,
 		todos: [],

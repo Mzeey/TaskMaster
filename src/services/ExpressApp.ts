@@ -1,5 +1,5 @@
 import express, {Application} from 'express';
-import { CategoryRoute, UserRoute } from '../routes';
+import { CategoryRoute, UserRoute, WeatherRoute } from '../routes';
 
 export default async(app: Application) =>{
     app.use(express.json());
@@ -9,7 +9,7 @@ export default async(app: Application) =>{
     app.use('/api/user', UserRoute);
     app.use('/api/categories', CategoryRoute);
     // app.use('/todo');
-    // app.use('/weather');
+    app.use('/api/weather', WeatherRoute);
 
     return app;
 }

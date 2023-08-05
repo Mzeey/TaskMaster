@@ -26,12 +26,12 @@ const UserSchema = new Schema(
         email: {type: String, required: true, unique: true},
         password: {type: String, required: true},
         salt: {type: String, required: true},
-        longitude: {type: Number, validate: {
+        longitude: {type: Number, default: 0.000, validate: {
             validator : (val:number) => { 
                 return val >= -180 && val <= 180
             }
         }},
-        latitude: {type: Number, validate: {
+        latitude: {type: Number, default: 0.000, validate: {
             validator: (val: number) => {
                 return val >= -90 && val <= 90;
             }
