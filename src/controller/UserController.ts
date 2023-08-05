@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ChangePasswordRequestInputs, LoginRequestInputs, RegisterRequestInputs, RequestPasswordResetInputs, ResetPasswordInputs, UpdateLocaitonRequestInputs, UpdateProfileRequestInputs, UserPayload, VerifyUserRequestInput } from "../dto/User.dto";
 import { GenerateSalt, GenerateSignature, HashPassword, ValidatePassword } from "../utilities";
 import { GenerateOTP, GenerateOTPExpiry, OnRequestOTP } from "../utilities/NotificationUtility";
-import { User, UserDoc } from "../models";
+import { Category, CategoryDoc, User, UserDoc } from "../models";
 
 export const GenerateUserSignature = (profile: UserDoc)=>{
     return GenerateSignature(
@@ -29,6 +29,16 @@ export const RegisterUser = async (req: Request, res: Response, next: NextFuncti
 		return res.status(400).json({ message: "This email is already registered" });
 	}
 
+    const defaultCategory = await Category.create({
+        title: "Home",
+        description: "Your Routine Tasks",
+        default: true,
+    });
+
+    if(!defaultCategory){
+        return res.status(400).json({message: "Could not Register User"});
+    }
+
 	const createdUser = await User.create({
 		firstName: userInputs.firstName,
 		lastName: userInputs.lastName,
@@ -40,10 +50,13 @@ export const RegisterUser = async (req: Request, res: Response, next: NextFuncti
 		otp_expiry: otpExpiry.toISOString(),
 		verified: false,
 		todos: [],
+        categories:[defaultCategory]
 	});
+
 	if (!createdUser) {
 		return res.status(400).json({ message: "User could not be registered" });
 	}
+
 	const mailingResponse = await OnRequestOTP(otp, userInputs.email);
 
 	if (mailingResponse.sent) {
@@ -137,7 +150,7 @@ export const Login = async (req: Request, res: Response, next: NextFunction) => 
         return res.status(400).json({message: "Invalid Login Credentials"});
     }
 
-    const validPassword = await ValidatePassword(userInputs.password, profile.password, profile.salt);
+    const validPassword = ValidatePassword(userInputs.password, profile.password, profile.salt);
     if(!validPassword){
         return res.status(400).json({message: "Invalid Login Credentials"});
     }

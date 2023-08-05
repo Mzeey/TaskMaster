@@ -1,7 +1,6 @@
 import mongoose,{ Document, Schema } from "mongoose";
 
 export interface CategoryDoc extends Document{
-    userId: string;
     title: string;
     description: string;
     default: boolean;
@@ -9,7 +8,6 @@ export interface CategoryDoc extends Document{
 
 const CategorySchema = new Schema(
     {
-        userId: {type: Schema.Types.ObjectId, ref: "user"},
         title: {type: String, required: true},
         description: {type: String},
         default: {type: Boolean, default: false}
