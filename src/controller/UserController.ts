@@ -131,6 +131,10 @@ export const RequestNewOTP = async (req: Request, res: Response, next: NextFunct
 
     profile.otp = otp;
     profile.otp_expiry = otp_expiry.toISOString();
+    const savedProfile = await profile.save();
+    if(!savedProfile){
+        return res.status(400).json({message: "Could not generate new OTP"})
+    }
 
     const mailingResponse = await OnRequestOTP(otp, profile.email);
     if(mailingResponse.sent){
